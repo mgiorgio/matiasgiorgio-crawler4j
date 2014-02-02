@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.util.PDFTextStripper;
 import org.apache.tika.metadata.DublinCore;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
@@ -47,15 +49,36 @@ public class Parser extends Configurable {
 	private HtmlParser htmlParser;
 	private ParseContext parseContext;
 
+	private PDFTextStripper pdfTextStripper;
+
 	public Parser(CrawlConfig config) {
 		super(config);
 		htmlParser = new HtmlParser();
 		parseContext = new ParseContext();
+		try {
+			pdfTextStripper = new PDFTextStripper();
+		} catch (IOException e) {
+			logger.error("Error creating PDF Component. This should not happen in production.");
+			throw new RuntimeException(e);
+		}
 	}
 
 	public boolean parse(Page page, String contextURL) {
 
-		if (Util.hasBinaryContent(page.getContentType())) {
+		/*
+		 * Checking for PDF content before checking for Binary content because
+		 * the latter looks for the "application" substring and would match
+		 * "application/pdf".
+		 */
+		if (Util.hasPDFContent(page.getContentType()) && config.isIncludePDF()) {
+			try {
+				treatPDFContentType(page);
+				return true;
+			} catch (IOException e) {
+				logger.error(e.getMessage() + ", while parsing: " + page.getWebURL().getURL());
+				return false;
+			}
+		} else if (Util.hasBinaryContent(page.getContentType())) {
 			if (!config.isIncludeBinaryContentInCrawling()) {
 				return false;
 			}
@@ -123,8 +146,7 @@ public class Parser extends Configurable {
 			if (href.startsWith("http://")) {
 				hrefWithoutProtocol = href.substring(7);
 			}
-			if (!hrefWithoutProtocol.contains("javascript:") && !hrefWithoutProtocol.contains("mailto:")
-					&& !hrefWithoutProtocol.contains("@")) {
+			if (!hrefWithoutProtocol.contains("javascript:") && !hrefWithoutProtocol.contains("mailto:") && !hrefWithoutProtocol.contains("@")) {
 				String url = URLCanonicalizer.getCanonicalURL(href, contextURL);
 				if (url != null) {
 					WebURL webURL = new WebURL();
@@ -155,6 +177,12 @@ public class Parser extends Configurable {
 		page.setParseData(parseData);
 		return true;
 
+	}
+
+	private void treatPDFContentType(Page page) throws IOException {
+		PDDocument doc = PDDocument.load(new ByteArrayInputStream(page.getContentData()));
+		page.setParseData(new PDFParseData(pdfTextStripper.getText(doc)));
+		doc.close();
 	}
 
 }

@@ -17,7 +17,9 @@
 
 package edu.uci.ics.crawler4j.util;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -29,7 +31,7 @@ public class IO {
 	public static boolean deleteFolder(File folder) {
 		return deleteFolderContents(folder) && folder.delete();
 	}
-	
+
 	public static boolean deleteFolderContents(File folder) {
 		System.out.println("Deleting content of: " + folder.getAbsolutePath());
 		File[] files = folder.listFiles();
@@ -46,14 +48,21 @@ public class IO {
 		}
 		return true;
 	}
-	
+
 	public static void writeBytesToFile(byte[] bytes, String destination) {
+		FileChannel fc = null;
 		try {
-			FileChannel fc = new FileOutputStream(destination).getChannel();
+			fc = new FileOutputStream(destination).getChannel();
 			fc.write(ByteBuffer.wrap(bytes));
-			fc.close();
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			if (fc != null) {
+				try {
+					fc.close();
+				} catch (IOException e) {
+				}
+			}
 		}
 	}
 }

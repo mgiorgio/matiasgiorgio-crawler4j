@@ -127,6 +127,13 @@ public class CrawlConfig {
 	 */
 	private String proxyPassword = null;
 
+	/**
+	 * Set to <code>true</code> if the crawler should process PDF files.
+	 * Otherwise, <code>false</code>.
+	 * 
+	 */
+	private boolean includePDF = false;
+
 	public CrawlConfig() {
 	}
 
@@ -149,6 +156,14 @@ public class CrawlConfig {
 			throw new Exception("Maximum value for crawl depth is " + Short.MAX_VALUE);
 		}
 
+	}
+
+	public boolean isIncludePDF() {
+		return includePDF;
+	}
+
+	public void setIncludePDF(boolean includePDF) {
+		this.includePDF = includePDF;
 	}
 
 	public String getCrawlStorageFolder() {

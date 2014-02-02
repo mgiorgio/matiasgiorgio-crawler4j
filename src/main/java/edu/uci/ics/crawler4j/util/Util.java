@@ -85,4 +85,14 @@ public class Util {
 		}
 		return false;
     }
+
+    public static boolean hasPDFContent(String contentType) {
+    	if (contentType != null) {
+    		String typeStr = contentType.toLowerCase();
+    		if (typeStr.contains("application/pdf")) {				
+    			return true;
+    		}
+    	}
+    	return false;
+    }
 }

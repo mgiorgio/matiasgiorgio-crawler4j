@@ -17,8 +17,15 @@
 
 package edu.uci.ics.crawler4j.crawler;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
+
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.frontier.DocIDServer;
 import edu.uci.ics.crawler4j.frontier.Frontier;
@@ -26,11 +33,6 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 import edu.uci.ics.crawler4j.url.URLCanonicalizer;
 import edu.uci.ics.crawler4j.url.WebURL;
 import edu.uci.ics.crawler4j.util.IO;
-import org.apache.log4j.Logger;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * The controller that manages a crawling session. This class creates the
@@ -72,8 +74,7 @@ public class CrawlController extends Configurable {
 
 	protected final Object waitingLock = new Object();
 
-	public CrawlController(CrawlConfig config, PageFetcher pageFetcher, RobotstxtServer robotstxtServer)
-			throws Exception {
+	public CrawlController(CrawlConfig config, PageFetcher pageFetcher, RobotstxtServer robotstxtServer) throws Exception {
 		super(config);
 
 		config.validate();
@@ -121,8 +122,12 @@ public class CrawlController extends Configurable {
 	 *            the number of concurrent threads that will be contributing in
 	 *            this crawling session.
 	 */
-	public <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers) {
-		this.start(_c, numberOfCrawlers, true);
+	public <T extends WebCrawler> void start(AbstractWebCrawlerFactory<T> crawlerFactory, final int numberOfCrawlers) {
+		this.start(crawlerFactory, numberOfCrawlers, true);
+	}
+
+	public <T extends WebCrawler> void startNonBlocking(Class<? extends WebCrawler> clazz, final int numberOfCrawlers) {
+		this.startNonBlocking(new ClassBasedCrawlerFactory(clazz), numberOfCrawlers);
 	}
 
 	/**
@@ -134,11 +139,11 @@ public class CrawlController extends Configurable {
 	 *            the number of concurrent threads that will be contributing in
 	 *            this crawling session.
 	 */
-	public <T extends WebCrawler> void startNonBlocking(final Class<T> _c, final int numberOfCrawlers) {
-		this.start(_c, numberOfCrawlers, false);
+	public <T extends WebCrawler> void startNonBlocking(AbstractWebCrawlerFactory<T> crawlerFactory, final int numberOfCrawlers) {
+		this.start(crawlerFactory, numberOfCrawlers, false);
 	}
 
-	protected <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers, boolean isBlocking) {
+	protected <T extends WebCrawler> void start(final AbstractWebCrawlerFactory<T> crawlerFactory, final int numberOfCrawlers, boolean isBlocking) {
 		try {
 			finished = false;
 			crawlersLocalData.clear();
@@ -146,7 +151,7 @@ public class CrawlController extends Configurable {
 			final List<T> crawlers = new ArrayList<>();
 
 			for (int i = 1; i <= numberOfCrawlers; i++) {
-				T crawler = _c.newInstance();
+				T crawler = crawlerFactory.createWebCrawler();
 				Thread thread = new Thread(crawler, "Crawler " + i);
 				crawler.setThread(thread);
 				crawler.init(i, this);
@@ -173,7 +178,7 @@ public class CrawlController extends Configurable {
 									if (!thread.isAlive()) {
 										if (!shuttingDown) {
 											logger.info("Thread " + i + " was dead, I'll recreate it.");
-											T crawler = _c.newInstance();
+											T crawler = crawlerFactory.createWebCrawler();
 											thread = new Thread(crawler, "Crawler " + (i + 1));
 											threads.remove(i);
 											threads.add(i, thread);
@@ -363,7 +368,7 @@ public class CrawlController extends Configurable {
 	 * 
 	 * Note that if you add three seen Urls with document ids 1,2, and 7. Then
 	 * the next URL that is found during the crawl will get a doc id of 8. Also
-	 * you need to ensure to add seen Urls in increasing order of document ids. 
+	 * you need to ensure to add seen Urls in increasing order of document ids.
 	 * 
 	 * @param url
 	 *            the URL of the page
@@ -441,5 +446,9 @@ public class CrawlController extends Configurable {
 		logger.info("Shutting down...");
 		this.shuttingDown = true;
 		frontier.finish();
+	}
+
+	public void start(Class<? extends WebCrawler> class1, int numberOfCrawlers) {
+		this.start(new ClassBasedCrawlerFactory(class1), numberOfCrawlers);
 	}
 }
