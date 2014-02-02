@@ -162,6 +162,11 @@ public class CrawlConfig {
 		return includePDF;
 	}
 
+	/**
+	 * Specifies if the crawler will process PDF files or not.
+	 * 
+	 * @param includePDF
+	 */
 	public void setIncludePDF(boolean includePDF) {
 		this.includePDF = includePDF;
 	}

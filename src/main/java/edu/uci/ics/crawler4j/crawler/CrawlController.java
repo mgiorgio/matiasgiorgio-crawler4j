@@ -116,13 +116,14 @@ public class CrawlController extends Configurable {
 	/**
 	 * Start the crawling session and wait for it to finish.
 	 * 
-	 * @param _c
-	 *            the class that implements the logic for crawler threads
+	 * @param crawlerFactory
+	 *            a factory able to create instances of {@link WebCrawler} or
+	 *            subclasses of it.
 	 * @param numberOfCrawlers
 	 *            the number of concurrent threads that will be contributing in
 	 *            this crawling session.
 	 */
-	public <T extends WebCrawler> void start(AbstractWebCrawlerFactory<T> crawlerFactory, final int numberOfCrawlers) {
+	public <T extends WebCrawler> void start(AbstractWebCrawlerFactory<? extends WebCrawler> crawlerFactory, final int numberOfCrawlers) {
 		this.start(crawlerFactory, numberOfCrawlers, true);
 	}
 
@@ -133,8 +134,9 @@ public class CrawlController extends Configurable {
 	/**
 	 * Start the crawling session and return immediately.
 	 * 
-	 * @param _c
-	 *            the class that implements the logic for crawler threads
+	 * @param crawlerFactory
+	 *            a factory able to create instances of {@link WebCrawler} or
+	 *            subclasses of it.
 	 * @param numberOfCrawlers
 	 *            the number of concurrent threads that will be contributing in
 	 *            this crawling session.
